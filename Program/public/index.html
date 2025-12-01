@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Calculator</title>
+<style>
+  body {
+    background: #f0f4f8;
+    font-family: 'Segoe UI', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+
+  .calculator {
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 16px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    width: 320px;
+  }
+
+  .display {
+    background: #e0e7ff;
+    color: #1e293b;
+    text-align: right;
+    padding: 15px;
+    border-radius: 10px;
+    font-size: 2rem;
+    margin-bottom: 15px;
+    min-height: 50px;
+    overflow-x: auto;
+  }
+
+  .buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+
+  button {
+    padding: 18px;
+    font-size: 1.2rem;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  button:hover { transform: scale(1.05); }
+
+  .btn-number { background: #fef3c7; color: #92400e; }
+  .btn-operator { background: #d1fae5; color: #065f46; }
+  .btn-equal { background: #c7d2fe; color: #3730a3; }
+  .btn-clear { background: #fee2e2; color: #b91c1c; }
+  .btn-clear-single { background: #fcd34d; color: #92400e; }
+
+  h3 { margin-top: 20px; font-size: 1.1rem; text-align: center; }
+
+  #history {
+    max-height: 120px;
+    overflow-y: auto;
+    margin-top: 10px;
+    font-family: monospace;
+  }
+
+  #history div {
+    padding: 4px 0;
+    border-bottom: 1px solid #e5e7eb;
+  }
+</style>
+</head>
+<body>
+
+<div class="calculator">
+  <div id="display" class="display">0</div>
+
+  <div class="buttons">
+    <!-- Row 1 -->
+    <button class="btn-number" onclick="press('7')">7</button>
+    <button class="btn-number" onclick="press('8')">8</button>
+    <button class="btn-number" onclick="press('9')">9</button>
+    <button class="btn-operator" onclick="press('/')">÷</button>
+
+    <!-- Row 2 -->
+    <button class="btn-number" onclick="press('4')">4</button>
+    <button class="btn-number" onclick="press('5')">5</button>
+    <button class="btn-number" onclick="press('6')">6</button>
+    <button class="btn-operator" onclick="press('*')">×</button>
+
+    <!-- Row 3 -->
+    <button class="btn-number" onclick="press('1')">1</button>
+    <button class="btn-number" onclick="press('2')">2</button>
+    <button class="btn-number" onclick="press('3')">3</button>
+    <button class="btn-operator" onclick="press('-')">−</button>
+
+    <!-- Row 4 -->
+    <button class="btn-number" onclick="press('0')">0</button>
+    <button class="btn-number" onclick="press('.')">.</button>
+    <button class="btn-equal" onclick="calculate()">=</button>
+    <button class="btn-operator" onclick="press('+')">+</button>
+
+    <!-- Row 5 -->
+    <button class="btn-operator" onclick="press('%')">%</button>
+    <button class="btn-operator" onclick="press('^')">^</button>
+    <button class="btn-clear-single" onclick="clearInput()">Clear</button>
+    <button class="btn-clear" onclick="clearHistory()">Clear History</button>
+  </div>
+
+  <h3>History</h3>
+  <div id="history"></div>
+</div>
+
+<script>
+let currentInput = "";
+
+// Handle button press
+function press(val) {
+  currentInput += val;
+  updateDisplay();
+}
+
+function updateDisplay() {
+  document.getElementById("display").textContent = currentInput || "0";
+}
+
+// Clear only input field
+function clearInput() {
+  currentInput = "";
+  updateDisplay();
+}
+
+// Perform calculation via backend
+async function calculate() {
+  try {
+    const match = currentInput.match(/([\d.]+)([\+\-\*\/\%\^])([\d.]+)/);
+    if (!match) {
+      alert("Invalid input! Format: number operator number");
+      return;
+    }
+
+    const [_, num1, operator, num2] = match;
+
+    const res = await fetch("/api/calculate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ num1, num2, operator })
+    });
+
+    const data = await res.json();
+    if (data.error) alert("Error: " + data.error);
+    else {
+      updateDisplayResult(data.result);
+      saveToHistory(data.expression, data.result);
+      loadHistory();
+      currentInput = "";
+    }
+  } catch (err) {
+    alert("Network error");
+  }
+}
+
+function updateDisplayResult(result) {
+  document.getElementById("display").textContent = result;
+}
+
+// ➤ LOCAL STORAGE FUNCTIONS
+function saveToHistory(expression, result) {
+  let history = JSON.parse(localStorage.getItem("calcHistory") || "[]");
+  history.unshift({ expression, result });
+  if (history.length > 20) history.pop();
+  localStorage.setItem("calcHistory", JSON.stringify(history));
+}
+
+function loadHistory() {
+  const historyDiv = document.getElementById("history");
+  const history = JSON.parse(localStorage.getItem("calcHistory") || "[]");
+  historyDiv.innerHTML = "";
+  history.forEach(row => {
+    const div = document.createElement("div");
+    div.textContent = `${row.expression} = ${row.result}`;
+    historyDiv.appendChild(div);
+  });
+}
+
+function clearHistory() {
+  if (!confirm("Clear all history?")) return;
+  localStorage.removeItem("calcHistory");
+  loadHistory();
+}
+
+// Keyboard support
+document.addEventListener("keydown", (e) => {
+  if ((e.key >= '0' && e.key <= '9') || e.key === '.') press(e.key);
+  else if (['+', '-', '*', '/', '%', '^'].includes(e.key)) press(e.key);
+  else if (e.key === 'Enter') calculate();
+  else if (e.key === 'Backspace') currentInput = currentInput.slice(0, -1);
+  else if (e.key === 'Escape') clearHistory();
+  updateDisplay();
+});
+
+// Load stored history on startup
+loadHistory();
+</script>
+
+</body>
+</html>

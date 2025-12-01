@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: projectdeployment
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: calc
+  template:
+    metadata:
+      labels:
+        app: calc
+    spec:
+      containers:
+        - name: calccontainer
+          image: gcpv2002/p1bootcamp:29
+          ports:
+
+            - containerPort: 80
