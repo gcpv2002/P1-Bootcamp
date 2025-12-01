@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: calccontainer
-          image: gcpv2002/p1bootcamp:29
+          image: gcpv2002/p1bootcamp:1
           ports:
 
             - containerPort: 80
