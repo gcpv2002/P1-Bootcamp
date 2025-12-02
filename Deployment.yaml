@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: projectdeployment
 spec:
-  replicas: 2
+  replicas: 4
   selector:
     matchLabels:
       app: calc
@@ -18,4 +18,5 @@ spec:
           ports:
 
             - containerPort: 80
+
 
